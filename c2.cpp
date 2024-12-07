@@ -1,36 +1,38 @@
 #include <iostream>
 #include <vector>
+#include <tuple>
 using namespace std;
-
-struct Connection
-{
-    int line, station1, station2;
-};
 
 int main()
 {
     int n, m, l;
     cin >> n >> m >> l;
 
-    // armazena as conexões
-    vector<Connection> connections;
+    // vetor de tuplos que guarda as conexões
+    vector<tuple<int, int, int>> connections;
 
     for (int i = 0; i < m; ++i)
     {
         int line, station1, station2;
         cin >> line >> station1 >> station2;
-        connections.push_back({line, station1, station2});
+        connections.emplace_back(line, station1, station2);
     }
 
-    // (Opcional) Verificar se a leitura foi feita corretamente
+    cout << "\n" << endl;
     cout << "Número de estações (n): " << n << endl;
     cout << "Número de ligações (m): " << m << endl;
     cout << "Número de linhas (l): " << l << endl;
+    cout << "\n" << endl;
     cout << "Conexões:" << endl;
-    for (const auto &conn : connections)
-    {
-        cout << "Linha " << conn.line << ": Estação " << conn.station1 << " <-> Estação " << conn.station2 << endl;
+    for (const auto& conn : connections) {
+        cout << "Linha " << get<0>(conn) << ": Estação " << get<1>(conn) << " <-> Estação " << get<2>(conn) << endl;
     }
+    cout << "\n" << endl;
+    cout << "Como as conexões estão guardadas num vetor de tuplos:" << endl;
+    for (const auto& conn : connections) {
+    cout << "(" << get<0>(conn) << ", " << get<1>(conn) << ", " << get<2>(conn) << ")" << endl;
+    }
+
 
     return 0;
 }
@@ -66,4 +68,25 @@ Exemplo 2:
     2 6 2
     6 4 2
     1 5 3
+
+
+Para testar:
+7 8 3
+3 2 1
+2 7 1
+7 5 1
+2 6 2
+6 4 2
+4 1 2
+4 1 3
+1 5 3
+
+
+7 6 3
+3 2 1
+2 7 1
+7 5 1
+2 6 2
+6 4 2
+1 5 3
 */
