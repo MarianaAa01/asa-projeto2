@@ -3,8 +3,46 @@
 #include <tuple>
 using namespace std;
 
+// algoritmo DFS
+void dfs(int station, vector<bool>& visited, const vector<vector<int>>& adjMatrix) {
+    visited[station] = true;
+
+    // explora todas as conexões da estação atual
+    for (size_t neighbor = 0; neighbor < adjMatrix.size(); ++neighbor) {
+        if (adjMatrix[station][neighbor] == 1 && !visited[neighbor]) {
+            dfs(neighbor, visited, adjMatrix);
+        }
+    }
+}
+
+// verifica conectividade com o DFS
+bool isConnected(int n, const vector<tuple<int, int, int>>& connections) {
+    vector<vector<int>> adjMatrix(n, vector<int>(n, 0));
+    vector<bool> visited(n, false);
+
+    // matriz de adjacências com base nas conexões
+    for (const auto& conn : connections) {
+        int station1 = get<1>(conn) - 1; 
+        int station2 = get<2>(conn) - 1; 
+        adjMatrix[station1][station2] = 1;
+        adjMatrix[station2][station1] = 1;
+    }
+
+    // começa a DFS pela estação 0
+    dfs(0, visited, adjMatrix);
+
+    // verifica se todas as estações foram visitadas
+    for (bool v : visited) {
+        if (!v) return false; // se alguma estação não foi visitada, o grafo não é conexo
+    }
+
+    return true;
+}
+
 int main()
 {
+    ios::sync_with_stdio(0);
+    cin.tie(0);
     int n, m, l;
     cin >> n >> m >> l;
 
@@ -17,7 +55,7 @@ int main()
         cin >> line >> station1 >> station2;
         connections.emplace_back(line, station1, station2);
     }
-
+/*
     cout << "\n" << endl;
     cout << "Número de estações (n): " << n << endl;
     cout << "Número de ligações (m): " << m << endl;
@@ -30,12 +68,21 @@ int main()
     cout << "\n" << endl;
     cout << "Como as conexões estão guardadas num vetor de tuplos:" << endl;
     for (const auto& conn : connections) {
-    cout << "(" << get<0>(conn) << ", " << get<1>(conn) << ", " << get<2>(conn) << ")" << endl;
-    }
+        cout << "(" << get<0>(conn) << ", " << get<1>(conn) << ", " << get<2>(conn) << ")" << endl;
+    }*/
 
+    // Verifica se o grafo é conexo
+    if (isConnected(n, connections)) {
+        cout << "\nO grafo é conexo.\n";
+    } else {
+        //cout << "\nO grafo não é conexo.\n";
+        cout << "\n-1\n";
+    }
 
     return 0;
 }
+
+
 
 /*
 n: número de estações (n>=2)
@@ -88,5 +135,16 @@ Para testar:
 7 5 1
 2 6 2
 6 4 2
+1 5 3
+
+
+grafo não conexo:
+8 7 3
+3 2 1
+2 7 1
+7 5 1
+2 6 2
+6 4 2
+1 4 3
 1 5 3
 */
