@@ -7,22 +7,9 @@ using namespace std;
 
 
 //_______________________________________________FUNÇÕES AUXILIARES_______________________________________________
-
-//findPairs encontra todos os pares possíveis entre estações
-vector<tuple<int, int>> findPairs(int numStations) {
-    // Cria os pares
-    vector<tuple<int, int>> pairs;
-    for (int i = 1; i <= numStations; ++i) {
-        for (int j = i + 1; j <= numStations; ++j) {
-            pairs.push_back({i, j}); // Adiciona o par como um vetor de dois elementos
-        }
-    }
-    return pairs;
-}
-
 // verifica conectividade com o DFS
 bool isConnected(int numStations, const vector<tuple<int, int, int>>& connections) {
-    // Cria matriz de adjacências
+    // matriz de adjacências
     vector<vector<int>> adjMatrix(numStations, vector<int>(numStations, 0));
     for (const auto& conn : connections) {
         int station1 = get<1>(conn) - 1; 
@@ -31,14 +18,12 @@ bool isConnected(int numStations, const vector<tuple<int, int, int>>& connection
         adjMatrix[station2][station1] = 1;
     }
 
-    // Vetor para rastrear estações visitadas
+    // vetor com estações visitadas
     vector<bool> visited(numStations, false);
 
-    // Pilha para implementar DFS
     vector<int> stack;
-    stack.push_back(0); // Começa pela estação 0
+    stack.push_back(0); // começamos na estação 0
 
-    // Realiza DFS iterativo
     while (!stack.empty()) {
         int station = stack.back();
         stack.pop_back();
@@ -46,7 +31,7 @@ bool isConnected(int numStations, const vector<tuple<int, int, int>>& connection
         if (!visited[station]) {
             visited[station] = true;
 
-            // Adiciona todas as conexões da estação atual à pilha
+            // adiciona todas as conexões da estação atual à stack
             for (int neighbor = 0; neighbor < numStations; ++neighbor) {
                 if (adjMatrix[station][neighbor] == 1 && !visited[neighbor]) {
                     stack.push_back(neighbor);
@@ -54,18 +39,13 @@ bool isConnected(int numStations, const vector<tuple<int, int, int>>& connection
             }
         }
     }
-    // Verifica se todas as estações foram visitadas
+    // verifica se todas as estações foram visitadas
     for (bool v : visited) {
-        if (!v) return false; // Se alguma estação não foi visitada, o grafo não é conexo
+        if (!v) return false; // se alguma estação não foi visitada, o grafo não é conexo
     }
 
     return true;
 }
-
-
-
-
-//DFS ITERATIVO
 
 
 //________________________________________________________________________________________________________________
@@ -85,31 +65,22 @@ int main()
         connections.emplace_back(line, station1, station2); 
     }
 
-    // Gera todos os pares (e1,e2) possíveis para depois analisarmos como ir de e1 para e2
-    vector<tuple<int, int>> pairs = findPairs(numStations);
-
-
-    
     // prints para eu ir percebendo o que está a acontecer:
+    /*
     cout << "pares: " << endl;
     for (const auto& p : pairs) {
         cout << "(" << get<0>(p) << ", " << get<1>(p) << ")" << endl;
     }
-
-    cout << "numStations: " << numStations << ", " << "numConections: " << numConections << ", " << "Número de linhas (l): " << numLines << endl;
+    
+    cout << "numStations: " << numStations << ", " << "numConections: " << numConections << ", " << "numLines: " << numLines << endl;
     cout << "\n" << endl;
     cout << "Conexões:" << endl;
     for (const auto& conn : connections) {
         cout << "Linha " << get<0>(conn) << ": " << get<1>(conn) << " <-> " << get<2>(conn) << endl;
-    }
+    }*/
 
     // Verifica se o grafo é conexo
-    if (isConnected(numStations, connections)) {
-        cout << "\nO grafo é conexo.\n";
-    } else {
-        cout << "\nO grafo não é conexo.\n";
-        cout << "\n-1\n"; //"Se existirem pelo menos duas estações e1, e2 sem ligação entre si, output esperado é -1."
-    }
+    cout << (isConnected(numStations, connections) ? "0\n" : "-1\n");
 
     return 0;
 }
