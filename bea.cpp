@@ -5,6 +5,7 @@
 #include <queue>
 #include <unordered_map>
 #include <limits>
+#include <unordered_set>
 
 using namespace std;
 
@@ -58,18 +59,35 @@ int metroConnectivity(int numStations, int numConnections, int numLines, const v
     memo.clear();
     vector<vector<pair<int, int>>> graph(numStations + 1);
     DSU dsu(numStations);
+    unordered_map<int, unordered_set<int>> station_lines;
 
     for (const auto& conn : connections) {
         int station1 = get<0>(conn), station2 = get<1>(conn), line = get<2>(conn);
         graph[station1].push_back(make_pair(station2, line));
         graph[station2].push_back(make_pair(station1, line));
         dsu.unite(station1, station2);
+        station_lines[station1].insert(line);
+        station_lines[station2].insert(line);
     }
-
+    
     // Check if all stations are connected
     int root = dsu.find(1);
     for (int i = 2; i <= numStations; i++) {
         if (dsu.find(i) != root) return -1;
+    }
+
+    unordered_set<int> connected_stations;
+    for (int line = 1; line <= numLines; ++line) {
+        connected_stations.clear();
+        for (int i = 1; i <= numStations; ++i) {
+            if (station_lines[i].count(line)) {
+                connected_stations.insert(i);
+            }
+        }
+        // If this line connects all stations, no line change is needed
+        if ((int)connected_stations.size() == numStations) {
+            return 0;  // No line change required
+        }
     }
 
     unordered_map<int, int> min_line_changes;
