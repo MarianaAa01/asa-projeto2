@@ -1,159 +1,149 @@
 #include <iostream>
+#include <stack>
 #include <vector>
 #include <tuple>
-#include <stack>
-#include <limits>
 #include <queue>
 #include <unordered_map>
+#include <limits>
 
 using namespace std;
-struct Edge {
-    int station;
-    int line;
 
-    // Define a custom equality operator for the unordered_map key comparison
-    bool operator==(const Edge& other) const {
-        return station == other.station && line == other.line;
+class DSU {
+private:
+    vector<int> parent;
+    vector<int> rank;
+
+public:
+    DSU(int n) : parent(n + 1), rank(n + 1, 0) {
+        for (int i = 0; i <= n; ++i) {
+            parent[i] = i;
+        }
+    }
+
+    int find(int x) {
+        if (parent[x] != x) {
+            parent[x] = find(parent[x]);
+        }
+        return parent[x];
+    }
+
+    bool unite(int x, int y) {
+        int rx = find(x);
+        int ry = find(y);
+
+        if (rx == ry) return false;
+
+        if (rank[rx] < rank[ry]) {
+            parent[rx] = ry;
+        } else if (rank[rx] > rank[ry]) {
+            parent[ry] = rx;
+        } else {
+            parent[ry] = rx;
+            ++rank[rx];
+        }
+        return true;
     }
 };
 
-// Define a custom hash function for the Edge struct
-namespace std {
-    template <>
-    struct hash<Edge> {
-        size_t operator()(const Edge& e) const {
-            return hash<int>()(e.station) ^ (hash<int>()(e.line) << 1);
-        }
-    };
-}
-
-unordered_map<Edge, int> memo;
-
-//_______________________________________________FUNÇÕES AUXILIARES_______________________________________________
-
-// verifica conectividade com o BFS -- não sei se isto é a maneira mais eficiente??? maybe rever
-bool isConnected(int numStations, const vector<vector<Edge>>& graph) {
-    queue<int> q;
-    vector<bool> visited(numStations + 1, false);
-    int visitedCount = 0; // Count of visited nodes
-
-    q.push(1);
-    visited[1] = true;
-
-    while (!q.empty()) {
-        int current = q.front();
-        q.pop();
-        visitedCount++;
-
-        // Traverse neighbors
-        for (const auto& edge : graph[current]) {
-            if (!visited[edge.station]) {
-                visited[edge.station] = true;
-                q.push(edge.station);
-            }
-        }
+struct pair_hash {
+    template <class T1, class T2>
+    size_t operator () (const pair<T1, T2> &p) const {
+        return hash<T1>{}(p.first) ^ (hash<T2>{}(p.second) << 1);
     }
+};
 
-    return visitedCount == numStations;
-}
-
-int bfs(int start, int end, const vector<vector<Edge>>& graph, int numStations, int numLines) {
-    if (start == end) return 0;
-
-    vector<vector<int>> line_changes(numStations + 1, vector<int>(numLines + 1, numeric_limits<int>::max()));
-    
-    priority_queue<tuple<int, int, int>, vector<tuple<int, int, int>>, greater<tuple<int, int, int>>> pq;
-    
-    // Initialize with all possible starting lines
-    for (const auto& edge : graph[start]) {
-        pq.push({0, edge.station, edge.line});
-        line_changes[edge.station][edge.line] = 0;
-    }
-
-    while (!pq.empty()) {
-        tuple<int, int, int> top = pq.top();
-        pq.pop();
-        int changes = get<0>(top);
-        int current_station = get<1>(top);  
-        int current_line = get<2>(top);
-
-        Edge currentEdge = {current_station, current_line};
-        if (memo.find(currentEdge) != memo.end()) {
-            // Use the memoized result to avoid reprocessing
-            changes = memo[currentEdge];
-
-            // Skip this station-line pair if its result is already computed and stored
-            if (changes >= line_changes[current_station][current_line]) continue; 
-        }
-
-
-        if (current_station == end) {
-            return changes;
-        }
-
-        // Skip if we've found a better path
-        if (changes > line_changes[current_station][current_line]) {
-            continue;
-        }
-
-        for (const auto& edge : graph[current_station]) {
-            int next_station = edge.station;
-            int next_line = edge.line;
-
-            // Calculate new changes
-            int new_changes = changes + (next_line != current_line ? 1 : 0);
-
-            // Only update if we've found a better path
-            if (new_changes < line_changes[next_station][next_line]) {
-                line_changes[next_station][next_line] = new_changes;
-                pq.push({new_changes, next_station, next_line});
-            }
-        }
-    }
-    return -1; 
-}
+unordered_map<pair<int, int>, int, pair_hash> memo;
 
 int metroConnectivity(int numStations, int numConnections, int numLines, const vector<tuple<int,int,int>>&connections){
-    vector<vector<Edge>> graph(numStations + 1); 
     memo.clear();
+    vector<vector<pair<int, int>>> graph(numStations + 1);
+    DSU dsu(numStations);
 
     for (const auto& conn : connections) {
-        int station1 = get<0>(conn);
-        int station2 = get<1>(conn);
-        int line = get<2>(conn);
-        graph[station1].push_back({station2, line});
-        graph[station2].push_back({station1, line});
+        int station1 = get<0>(conn), station2 = get<1>(conn), line = get<2>(conn);
+        graph[station1].push_back(make_pair(station2, line));
+        graph[station2].push_back(make_pair(station1, line));
+        dsu.unite(station1, station2);
     }
 
-    if(!isConnected(numStations, graph)){    
-        return -1;
+    int root = dsu.find(1);
+    for (int i = 2; i <= numStations; i++) {
+        if (dsu.find(i) != root) return -1;
     }
-  
+
+    unordered_map<int, int> min_line_changes;
     int mc = 0;
-    for (int i = 1; i <= numStations; i++) {
-        for (int j = i + 1; j <= numStations; j++) {
-            // Create an Edge to use for memoization
-            Edge key = {i, j};
+    for (int start = 1; start <= numStations; start++) {
+        for (int end = start + 1; end <= numStations; end++) {
 
-            // If result is already memoized, use it
-            if (memo.find(key) == memo.end()) {
-                int changes = bfs(i, j, graph, numStations, numLines);
-                memo[key] = changes; // Store result in memo
-                if (changes == numLines - 1) {
-                    return changes;
-                }
+            auto memo_key = make_pair(min(start, end), max(start, end));
+
+            if (memo.count(memo_key)) {
+                mc = max(mc, memo[memo_key]);
+                //cout << "Memoized result for (" << start << ", " << end << ") = " << mc << endl;
+                continue;
+            }
+            priority_queue<tuple<int, int, int>, vector<tuple<int, int, int>>, greater<tuple<int, int, int>>> pq;
+
+            for(const auto& start_edge : graph[start]) {
+                pq.push({0, start_edge.first, start_edge.second});
             }
 
-            mc = max(mc, memo[key]);
+            min_line_changes.clear();
+            min_line_changes[start] = 0;
+
+            int current_mc = numeric_limits<int>::max();
+            //cout << "Starting BFS from station " << start << " to station " << end << endl;
+
+            while(!pq.empty()) {
+                int changes, current_station, current_line;
+                tie(changes, current_station, current_line) = pq.top(); 
+                pq.pop();
+
+                auto memo_key = make_pair(min(current_station, end), max(current_station, end));
+                //cout << "Visiting station " << current_station << " on line " << current_line << " with " << changes << " line changes." << endl;
+
+                if (current_station == end) {
+                    current_mc = min(current_mc, changes);
+                    memo[memo_key] = current_mc; 
+                    //cout << "Reached destination station " << end << " with " << current_mc << " line changes." << endl;
+                    break;
+                }
+
+                if (min_line_changes.count(current_station) && changes > min_line_changes[current_station]) {
+                    //cout << "Skipping station " << current_station << " since we've already found a better path." << endl;
+                    continue;
+                }
+                
+                for (const auto& next_edge : graph[current_station]) {
+                    int next_station = next_edge.first;
+                    int next_line = next_edge.second;
+
+                    int new_changes = changes + (next_line != current_line);
+
+                    if (!min_line_changes.count(next_station) || new_changes < min_line_changes[next_station]) {
+                        min_line_changes[next_station] = new_changes;
+                        pq.push(make_tuple(new_changes, next_station, next_line));
+
+                        //cout << "Pushing to queue: station " << next_station << " on line " << next_line << " with " << new_changes << " line changes." << endl;
+                    }
+                }
+            }
+            memo[memo_key] = current_mc;
+            mc = max(mc, current_mc);
+            //cout << "Finished processing (" << start << ", " << end << ") with " << current_mc << " line changes." << endl;
+            if (mc == numLines - 1) {
+                //cout << "Maximum possible line changes found, exiting early." << endl;
+                return mc;
+            }
         }
     }
-
+    //cout << "Final mc; "<< mc<< endl;
     return mc;
 }
 
 //________________________________________________________________________________________________________________
-int main()
-{
+int main() {
     ios::sync_with_stdio(0);
     cin.tie(0);
     int numStations, numConnections, numLines;
@@ -173,13 +163,12 @@ int main()
         return 0; 
     }
 
-    if(numConnections >= numStations - 1){
-        int mc = metroConnectivity(numStations, numConnections, numLines, connections);
-        cout << mc << endl;
-        return 0; 
-    }
-    else{
+    if(numConnections < numStations - 1){
         cout << -1 << endl;
         return 0; 
     }
+    
+    int mc = metroConnectivity(numStations, numConnections, numLines, connections);
+    cout << mc << endl;
+    return 0;
 }

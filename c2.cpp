@@ -1,155 +1,89 @@
 #include <iostream>
 #include <vector>
-#include <tuple>
-#include <stack>
-#include <limits>
+#include <set>
+#include <map>
+#include <algorithm>
 using namespace std;
 
+class MetroNetwork {
+public:
+    // Grafo de linhas (onde cada linha contém um set de estações)
+    vector<set<int>> lines;
+    // Mapa que mapeia cada estação para as linhas em que ela aparece
+    map<int, set<int>> station_to_lines;
 
-//_______________________________________________FUNÇÕES AUXILIARES_______________________________________________
-// verifica conectividade com o DFS
-bool isConnected(int numStations, const vector<tuple<int, int, int>>& connections) {
-    // matriz de adjacências
-    vector<vector<int>> adjMatrix(numStations, vector<int>(numStations, 0));
-    for (const auto& conn : connections) {
-        int station1 = get<1>(conn) - 1; 
-        int station2 = get<2>(conn) - 1; 
-        adjMatrix[station1][station2] = 1;
-        adjMatrix[station2][station1] = 1;
+    // Adiciona a conexão entre duas estações na linha l
+    void addConnection(int l, int x, int y) {
+        if (lines.size() <= l) {
+            lines.resize(l + 1);  // Garante que o índice da linha l existe
+        }
+        
+        // Adiciona a estação x e y à linha l
+        lines[l].insert(x);
+        lines[l].insert(y);
+
+        // Adiciona as estações ao mapa que associa estação com linhas
+        station_to_lines[x].insert(l);
+        station_to_lines[y].insert(l);
     }
 
-    // vetor com estações visitadas
-    vector<bool> visited(numStations, false);
+    // Verifica se o grafo de linhas é conexo
+    bool isLineGraphConnected() {
+        // Vamos considerar a primeira linha como referência
+        vector<bool> visited(lines.size(), false);
 
-    vector<int> stack;
-    stack.push_back(0); // começamos na estação 0
+        // Verifica se o número de linhas é maior que 1
+        if (lines.empty() || lines.size() == 1) {
+            return true; // Se há 0 ou 1 linha, o grafo de linhas é conexo
+        }
 
-    while (!stack.empty()) {
-        int station = stack.back();
-        stack.pop_back();
+        // DFS para verificar a conectividade das linhas
+        dfs(0, visited);
 
-        if (!visited[station]) {
-            visited[station] = true;
+        // Se todas as linhas foram visitadas, o grafo de linhas é conexo
+        for (bool v : visited) {
+            if (!v) {
+                return false;
+            }
+        }
+        return true;
+    }
 
-            // adiciona todas as conexões da estação atual à stack
-            for (int neighbor = 0; neighbor < numStations; ++neighbor) {
-                if (adjMatrix[station][neighbor] == 1 && !visited[neighbor]) {
-                    stack.push_back(neighbor);
+private:
+    void dfs(int line, vector<bool>& visited) {
+        visited[line] = true;
+        
+        // Explora todas as linhas que compartilham uma estação com a linha atual
+        for (int station : lines[line]) {
+            for (int connected_line : station_to_lines[station]) {
+                if (!visited[connected_line]) {
+                    dfs(connected_line, visited);
                 }
             }
         }
     }
-    // verifica se todas as estações foram visitadas
-    for (bool v : visited) {
-        if (!v) return false; // se alguma estação não foi visitada, o grafo não é conexo
+};
+
+int main() {
+    int n, m, l;
+    cin >> n >> m >> l;
+
+    MetroNetwork network;
+
+    // Lê as ligações entre estações
+    for (int i = 0; i < m; i++) {
+        int line, x, y;
+        cin >> line >> x >> y;
+        line--;  // Para ajustar para o índice de 0
+        network.addConnection(line, x, y);
     }
 
-    return true;
-}
-
-
-//________________________________________________________________________________________________________________
-int main()
-{
-    ios::sync_with_stdio(0);
-    cin.tie(0);
-    int numStations, numConections, numLines;
-    cin >> numStations >> numConections >> numLines;
-
-    //temos as conexões aqui neste vetor de tuplos
-    vector<tuple<int, int, int>> connections;
-    for (int i = 0; i < numConections; ++i) //este for é para guardar as conexões todas
-    {
-        int line, station1, station2;
-        cin >> line >> station1 >> station2;
-        connections.emplace_back(line, station1, station2); 
+    // Verifica se o grafo de linhas é conexo
+    if (network.isLineGraphConnected()) {
+        cout << "O grafo de linhas é conexo." << endl;
+    } else {
+        cout << "O grafo de linhas não é conexo." << endl;
     }
-
-    // prints para eu ir percebendo o que está a acontecer:
-    /*
-    cout << "pares: " << endl;
-    for (const auto& p : pairs) {
-        cout << "(" << get<0>(p) << ", " << get<1>(p) << ")" << endl;
-    }
-    
-    cout << "numStations: " << numStations << ", " << "numConections: " << numConections << ", " << "numLines: " << numLines << endl;
-    cout << "\n" << endl;
-    cout << "Conexões:" << endl;
-    for (const auto& conn : connections) {
-        cout << "Linha " << get<0>(conn) << ": " << get<1>(conn) << " <-> " << get<2>(conn) << endl;
-    }*/
-
-    // Verifica se o grafo é conexo
-    cout << (isConnected(numStations, connections) ? "0\n" : "-1\n");
 
     return 0;
 }
-
-
-
-
-
-/*
-n: número de estações (n>=2) numStations
-m: número de ligações (m>=0) numConections
-l: número de linhas da rede de metro (l>=0) numLines
-
-cada linha (i) do ficheiro tem l, x, y (x está diretamente ligada a y na linha l)
-
-entre duas estações podem existir múltiplas conexões, correspondendo a diferentes linhas de metro
-
-Exemplo 1:
-
-    7 8 3    n=7; m=8; l=3
-    3 2 1    a estação 3 está diretamente ligada à estação 2 na linha 1
-    2 7 1
-    7 5 1
-    2 6 2
-    6 4 2
-    4 1 2
-    4 1 3
-    1 5 3
-
-
-Exemplo 2:
-
-    7 6 3 n=7; m=6; l=3
-    3 2 1
-    2 7 1
-    7 5 1
-    2 6 2
-    6 4 2
-    1 5 3
-
-
-Para testar:
-7 8 3
-3 2 1
-2 7 1
-7 5 1
-2 6 2
-6 4 2
-4 1 2
-4 1 3
-1 5 3
-
-
-7 6 3
-3 2 1
-2 7 1
-7 5 1
-2 6 2
-6 4 2
-1 5 3
-
-
-grafo não conexo:
-8 7 3
-3 2 1
-2 7 1
-7 5 1
-2 6 2
-6 4 2
-1 4 3
-1 5 3
-*/
