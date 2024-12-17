@@ -1,11 +1,10 @@
 #include <iostream>
-#include <stack>
 #include <vector>
 #include <tuple>
 #include <queue>
 #include <unordered_map>
-#include <limits>
 #include <unordered_set>
+#include <limits>
 
 using namespace std;
 
@@ -48,21 +47,18 @@ public:
 
 unordered_map<int, unordered_set<int>> buildLineGraph(int numStations, int numLines, const vector<tuple<int, int, int>>& connections) {
     unordered_map<int, unordered_set<int>> lineGraph;
-    unordered_map<int, unordered_set<int>> stationLines;  // Map stations to lines
+    unordered_map<int, unordered_set<int>> stationLines;
 
-    // Create station to lines mapping
     for (const auto& conn : connections) {
         int station1 = get<0>(conn), station2 = get<1>(conn), line = get<2>(conn);
         stationLines[station1].insert(line);
         stationLines[station2].insert(line);
     }
 
-    // Build the line graph: connect lines that share stations
     for (const auto& stationEntry : stationLines) {
         const auto& lines = stationEntry.second;
         vector<int> lineList(lines.begin(), lines.end());
 
-        // Connect lines that share a station (Only need to connect pairs)
         for (int i = 0; i < (int)lineList.size(); ++i) {
             for (int j = i + 1; j < (int)lineList.size(); ++j) {
                 int line1 = lineList[i], line2 = lineList[j];
@@ -78,11 +74,11 @@ unordered_map<int, unordered_set<int>> buildLineGraph(int numStations, int numLi
 int minLineChangesPath(int startLine, int endLine, const unordered_map<int, unordered_set<int>>& lineGraph) {
     unordered_map<int, int> line_changes;
     for (const auto& line : lineGraph) {
-        line_changes[line.first] = numeric_limits<int>::max();  // Initialize all distances as infinity
+        line_changes[line.first] = numeric_limits<int>::max();
     }
     line_changes[startLine] = 0;
 
-    priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> pq;  // Min-heap (distance, line)
+    priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> pq;
     pq.push({0, startLine});
 
     while (!pq.empty()) {
@@ -92,7 +88,6 @@ int minLineChangesPath(int startLine, int endLine, const unordered_map<int, unor
 
         if (changes > line_changes[currentLine]) continue;
 
-        // Explore neighbors (lines connected to current line)
         for (int neighbor : lineGraph.at(currentLine)) {
             int newChanges = changes + 1;
             if (newChanges < line_changes[neighbor]) {
@@ -105,17 +100,15 @@ int minLineChangesPath(int startLine, int endLine, const unordered_map<int, unor
     return line_changes[endLine];
 }
 
-
 int metroConnectivity(int numStations, int numConnections, int numLines, const vector<tuple<int, int, int>>& connections) {
     if (numLines == 1 || numStations == 1) {
-        return 0;  // No line change required
+        return 0;
     }
 
     if (numConnections < numStations - 1) {
         return -1;
     }
 
-    // Check if all stations are connected using Union-Find
     DSU dsu(numStations);
     for (const auto& conn : connections) {
         int station1 = get<0>(conn), station2 = get<1>(conn);
@@ -125,30 +118,26 @@ int metroConnectivity(int numStations, int numConnections, int numLines, const v
     int root = dsu.find(1);
     for (int i = 2; i <= numStations; i++) {
         if (dsu.find(i) != root) {
-            return -1;  // Stations are not fully connected
+            return -1;
         }
     }
 
     unordered_map<int, unordered_set<int>> lineStationsMap;
 
-    // Build the map of lines to stations they connect
     for (const auto& conn : connections) {
         int station1 = get<0>(conn), station2 = get<1>(conn), line = get<2>(conn);
         lineStationsMap[line].insert(station1);
         lineStationsMap[line].insert(station2);
     }
 
-    // Check if any line connects all stations
     for (const auto& entry : lineStationsMap) {
         if ((int)entry.second.size() == numStations) {
-            return 0;  // This line connects all stations, so no line change needed
+            return 0;
         }
     }
 
-    // Build the line graph
     auto lineGraph = buildLineGraph(numStations, numLines, connections);
 
-    // Try to find the longest shortest path between lines
     int maxChanges = 0;
     for (int startLine = 1; startLine <= numLines; ++startLine) {
         for (int endLine = startLine + 1; endLine <= numLines; ++endLine) {
@@ -157,8 +146,8 @@ int metroConnectivity(int numStations, int numConnections, int numLines, const v
                 return changes;
             }
             maxChanges = max(maxChanges, changes);
-            }
         }
+    }
     return maxChanges;
 }
 
