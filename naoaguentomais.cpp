@@ -129,15 +129,19 @@ int metroConnectivity(int numStations, int numConnections, int numLines, const v
         }
     }
 
-    unordered_map<int, int> lineStationCount;
+    unordered_map<int, unordered_set<int>> lineStationsMap;
+
+    // Build the map of lines to stations they connect
     for (const auto& conn : connections) {
-        int line = get<2>(conn);
-        lineStationCount[line]++;
+        int station1 = get<0>(conn), station2 = get<1>(conn), line = get<2>(conn);
+        lineStationsMap[line].insert(station1);
+        lineStationsMap[line].insert(station2);
     }
 
-    for (const auto& entry : lineStationCount) {
-        if (entry.second == numStations) {
-            return 0;  // This line covers all stations, so no line change needed
+    // Check if any line connects all stations
+    for (const auto& entry : lineStationsMap) {
+        if ((int)entry.second.size() == numStations) {
+            return 0;  // This line connects all stations, so no line change needed
         }
     }
 
