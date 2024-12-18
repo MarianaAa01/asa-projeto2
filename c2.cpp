@@ -1,89 +1,207 @@
 #include <iostream>
 #include <vector>
-#include <set>
-#include <map>
-#include <algorithm>
+#include <tuple>
+#include <queue>
+#include <unordered_map>
+#include <unordered_set>
+#include <limits>
+
 using namespace std;
 
-class MetroNetwork {
+class DSU
+{
+private:
+    vector<int> parent;
+    vector<int> rank;
+
 public:
-    // Grafo de linhas (onde cada linha contém um set de estações)
-    vector<set<int>> lines;
-    // Mapa que mapeia cada estação para as linhas em que ela aparece
-    map<int, set<int>> station_to_lines;
-
-    // Adiciona a conexão entre duas estações na linha l
-    void addConnection(int l, int x, int y) {
-        if (lines.size() <= l) {
-            lines.resize(l + 1);  // Garante que o índice da linha l existe
+    DSU(int n) : parent(n + 1), rank(n + 1, 0)
+    {
+        for (int i = 0; i <= n; ++i)
+        {
+            parent[i] = i;
         }
-        
-        // Adiciona a estação x e y à linha l
-        lines[l].insert(x);
-        lines[l].insert(y);
-
-        // Adiciona as estações ao mapa que associa estação com linhas
-        station_to_lines[x].insert(l);
-        station_to_lines[y].insert(l);
     }
 
-    // Verifica se o grafo de linhas é conexo
-    bool isLineGraphConnected() {
-        // Vamos considerar a primeira linha como referência
-        vector<bool> visited(lines.size(), false);
-
-        // Verifica se o número de linhas é maior que 1
-        if (lines.empty() || lines.size() == 1) {
-            return true; // Se há 0 ou 1 linha, o grafo de linhas é conexo
+    int find(int x)
+    {
+        if (parent[x] != x)
+        {
+            parent[x] = find(parent[x]);
         }
+        return parent[x];
+    }
 
-        // DFS para verificar a conectividade das linhas
-        dfs(0, visited);
+    bool unite(int x, int y)
+    {
+        int rx = find(x);
+        int ry = find(y);
 
-        // Se todas as linhas foram visitadas, o grafo de linhas é conexo
-        for (bool v : visited) {
-            if (!v) {
-                return false;
-            }
+        if (rx == ry)
+            return false;
+
+        if (rank[rx] < rank[ry])
+        {
+            parent[rx] = ry;
+        }
+        else if (rank[rx] > rank[ry])
+        {
+            parent[ry] = rx;
+        }
+        else
+        {
+            parent[ry] = rx;
+            ++rank[rx];
         }
         return true;
     }
+};
 
-private:
-    void dfs(int line, vector<bool>& visited) {
-        visited[line] = true;
-        
-        // Explora todas as linhas que compartilham uma estação com a linha atual
-        for (int station : lines[line]) {
-            for (int connected_line : station_to_lines[station]) {
-                if (!visited[connected_line]) {
-                    dfs(connected_line, visited);
-                }
+unordered_map<int, unordered_set<int>> buildLineGraph(const vector<tuple<int, int, int>> &connections)
+{
+    unordered_map<int, unordered_set<int>> lineGraph;
+    unordered_map<int, unordered_set<int>> stationLines;
+
+    for (const auto &conn : connections)
+    {
+        int station1 = get<0>(conn), station2 = get<1>(conn), line = get<2>(conn);
+        stationLines[station1].insert(line);
+        stationLines[station2].insert(line);
+    }
+
+    for (const auto &stationEntry : stationLines)
+    {
+        const auto &lines = stationEntry.second;
+        vector<int> lineList(lines.begin(), lines.end());
+
+        for (int i = 0; i < (int)lineList.size(); ++i)
+        {
+            for (int j = i + 1; j < (int)lineList.size(); ++j)
+            {
+                int line1 = lineList[i], line2 = lineList[j];
+                lineGraph[line1].insert(line2);
+                lineGraph[line2].insert(line1);
             }
         }
     }
-};
 
-int main() {
-    int n, m, l;
-    cin >> n >> m >> l;
+    return lineGraph;
+}
 
-    MetroNetwork network;
+int minLineChangesPath(int startLine, int endLine, const unordered_map<int, unordered_set<int>> &lineGraph)
+{
+    unordered_map<int, int> line_changes;
+    for (const auto &line : lineGraph)
+    {
+        line_changes[line.first] = numeric_limits<int>::max();
+    }
+    line_changes[startLine] = 0;
 
-    // Lê as ligações entre estações
-    for (int i = 0; i < m; i++) {
-        int line, x, y;
-        cin >> line >> x >> y;
-        line--;  // Para ajustar para o índice de 0
-        network.addConnection(line, x, y);
+    priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> pq;
+    pq.push({0, startLine});
+
+    while (!pq.empty())
+    {
+        int changes = pq.top().first;
+        int currentLine = pq.top().second;
+        pq.pop();
+
+        if (changes > line_changes[currentLine])
+            continue;
+
+        for (int neighbor : lineGraph.at(currentLine))
+        {
+            int newChanges = changes + 1;
+            if (newChanges < line_changes[neighbor])
+            {
+                line_changes[neighbor] = newChanges;
+                pq.push({newChanges, neighbor});
+            }
+        }
     }
 
-    // Verifica se o grafo de linhas é conexo
-    if (network.isLineGraphConnected()) {
-        cout << "O grafo de linhas é conexo." << endl;
-    } else {
-        cout << "O grafo de linhas não é conexo." << endl;
+    return line_changes[endLine];
+}
+
+int metroConnectivity(int numStations, int numConnections, int numLines, const vector<tuple<int, int, int>> &connections)
+{
+    if (numLines == 1 || numStations == 1)
+    {
+        return 0;
     }
 
+    if (numConnections < numStations - 1)
+    {
+        return -1;
+    }
+
+    DSU dsu(numStations);
+    for (const auto &conn : connections)
+    {
+        int station1 = get<0>(conn), station2 = get<1>(conn);
+        dsu.unite(station1, station2);
+    }
+
+    int root = dsu.find(1);
+    for (int i = 2; i <= numStations; i++)
+    {
+        if (dsu.find(i) != root)
+        {
+            return -1;
+        }
+    }
+
+    unordered_map<int, unordered_set<int>> lineStationsMap;
+
+    for (const auto &conn : connections)
+    {
+        int station1 = get<0>(conn), station2 = get<1>(conn), line = get<2>(conn);
+        lineStationsMap[line].insert(station1);
+        lineStationsMap[line].insert(station2);
+    }
+
+    for (const auto &entry : lineStationsMap)
+    {
+        if ((int)entry.second.size() == numStations)
+        {
+            return 0;
+        }
+    }
+
+    auto lineGraph = buildLineGraph(connections);
+
+    int maxChanges = 0;
+    for (int startLine = 1; startLine <= numLines; ++startLine)
+    {
+        for (int endLine = startLine + 1; endLine <= numLines; ++endLine)
+        {
+            int changes = minLineChangesPath(startLine, endLine, lineGraph);
+            if (changes == numLines - 1)
+            {
+                return changes;
+            }
+            maxChanges = max(maxChanges, changes);
+        }
+    }
+    return maxChanges;
+}
+
+int main()
+{
+    ios::sync_with_stdio(0);
+    cin.tie(0);
+    int numStations, numConnections, numLines;
+    cin >> numStations >> numConnections >> numLines;
+
+    vector<tuple<int, int, int>> connections(numConnections);
+    for (int i = 0; i < numConnections; ++i)
+    {
+        int line, station1, station2;
+        cin >> station1 >> station2 >> line;
+        connections[i] = make_tuple(station1, station2, line);
+    }
+
+    int mc = metroConnectivity(numStations, numConnections, numLines, connections);
+    cout << mc << endl;
     return 0;
 }

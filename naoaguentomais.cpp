@@ -45,7 +45,7 @@ public:
     }
 };
 
-unordered_map<int, unordered_set<int>> buildLineGraph(int numStations, int numLines, const vector<tuple<int, int, int>>& connections) {
+unordered_map<int, unordered_set<int>> buildLineGraph(const vector<tuple<int, int, int>>& connections) {
     unordered_map<int, unordered_set<int>> lineGraph;
     unordered_map<int, unordered_set<int>> stationLines;
 
@@ -136,7 +136,7 @@ int metroConnectivity(int numStations, int numConnections, int numLines, const v
         }
     }
 
-    auto lineGraph = buildLineGraph(numStations, numLines, connections);
+    auto lineGraph = buildLineGraph(connections);
 
     int maxChanges = 0;
     for (int startLine = 1; startLine <= numLines; ++startLine) {
