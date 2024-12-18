@@ -5,7 +5,7 @@
 #include <queue>
 #include <unordered_map>
 #include <limits>
-#include <unordered_set>
+#include <unordered_set> 
 
 using namespace std;
 
@@ -55,7 +55,7 @@ struct pair_hash {
 
 unordered_map<pair<int, int>, int, pair_hash> memo;
 
-int metroConnectivity(int numStations, int numConnections, int numLines, const vector<tuple<int,int,int>>& connections) {
+int metroConnectivity(int numStations, int numLines, const vector<tuple<int,int,int>>& connections) {
     memo.clear();
     vector<vector<pair<int, int>>> graph(numStations + 1);
     DSU dsu(numStations);
@@ -161,7 +161,7 @@ int main() {
         return 0;
     }
 
-    int mc = metroConnectivity(numStations, numConnections, numLines, connections);
+    int mc = metroConnectivity(numStations, numLines, connections);
     cout << mc << endl;
     return 0;
 }
